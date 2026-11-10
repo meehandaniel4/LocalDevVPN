@@ -1,4 +1,4 @@
-name: Build IPA with Fake Signing
+name: Build Unsigned IPA
 
 on:
     push:
@@ -14,9 +14,6 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-
-            - name: Install ldid
-              run: brew install ldid
 
             - name: Select Latest Xcode
               run: sudo xcode-select -switch /Applications/Xcode.app
@@ -38,31 +35,12 @@ jobs:
             - name: Copy App to Payload
               run: cp -R build/LocalDevVPN.xcarchive/Products/Applications/LocalDevVPN.app Payload/LocalDevVPN.app
 
-            - name: Find and Sign App Extension
-              run: |
-                  APPEX_PATH=$(find Payload/LocalDevVPN.app/PlugIns -name "*.appex" | head -n 1)
-                  if [ -z "$APPEX_PATH" ]; then
-                    echo "Error: App Extension (.appex) not found in PlugIns directory."
-                    exit 1
-                  fi
-                  echo "Found App Extension at: $APPEX_PATH"
-                  # Use the specific entitlements for the extension
-                  ldid -S"${GITHUB_WORKSPACE}/TunnelProv/TunnelProv.entitlements" "$APPEX_PATH/$(basename "$APPEX_PATH" .appex)"
-                  echo "Signed App Extension."
-
-            - name: Sign Main App Bundle
-              run: |
-                  APP_BINARY_PATH="Payload/LocalDevVPN.app/LocalDevVPN"
-                  # Use the specific entitlements for the main app
-                  ldid -S"${GITHUB_WORKSPACE}/LocalDevVPN/LocalDevVPN.entitlements" "$APP_BINARY_PATH"
-                  echo "Signed Main App Bundle."
-
             - name: Create IPA
               run: |
-                  zip -r ./LocalDevVPN-fakesigned.ipa Payload
+                  zip -r ./LocalDevVPN-unsigned.ipa Payload
 
             - name: Upload IPA Artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
-                  name: LocalDevVPN-IPA.ipa
-                  path: LocalDevVPN-fakesigned.ipa
+                  path: LocalDevVPN-unsigned.ipa
+                  archive: false
